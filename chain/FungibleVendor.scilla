@@ -7,15 +7,17 @@ import IntUtils
 (***************************************************)
 library FungibleVendor
 
-(* Event emitted when the contract is initialized *)
-let mk_contract_initialized_event =
-  { _eventname : "Contract initialized" }
-
   
 let one_msg =
   fun (m : Message) =>
     let e = Nil {Message} in
     Cons {Message} m e
+
+let two_msgs =
+  fun (msg1 : Message) =>
+  fun (msg2 : Message) =>
+    let msgs_tmp = one_msg msg2 in
+    Cons {Message} msg1 msgs_tmp
   
 type Error =
 | NonOwnerCannotCall
@@ -139,7 +141,15 @@ procedure sale(token_amount: Uint128)
     | True =>
       match sufficient_payment with
       | True =>
-        (*TODO partial refunds if overpaying?*)
+        overpaying = builtin lt net_cost _amount;
+        match overpaying with
+          |True =>
+            refund = builtin sub _amount net_cost;
+             msg_to_token = {_tag: "TransferFrom"; _recipient: token_address ; _amount: zero; from:_this_address; to:_sender; amount:token_amount};
+             refund_msg = {_tag: "AddFunds"; _recipient: _sender; _amount: refund};
+             msgs = two_msgs msg_to_token refund_msg;
+             send msgs
+          |False =>
         accept;
         msg_to_token = {_tag: "TransferFrom"; _recipient: token_address ; _amount: zero; from:_this_address; to:_sender; amount:token_amount};
         msgs = one_msg msg_to_token;
@@ -147,6 +157,7 @@ procedure sale(token_amount: Uint128)
         | False =>
           err = InsufficientFunds;
           ThrowError err
+          end
       end
       end
     end
