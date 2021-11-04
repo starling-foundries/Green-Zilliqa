@@ -37,10 +37,6 @@ let remove_elements_from_list = fun(value: ByStr20) => fun(l: List ByStr20) =>
   let f = not_equal value in
   let filterByStr20 = @list_filter ByStr20 in (* from ListUtils *)
   filterByStr20 f l
-
-type Listing =
-  | Listing of ByStr20 ByStr20 Uint256 String (Option Uint128)
-
   
   
 type Error =
@@ -75,10 +71,9 @@ let empty_list = Nil {ByStr20}
 (***************************************************)
 (*             The contract definition             *)
 (*                                                 *)
-(* This contract enables an NFT token owner to sell*)
-(* their token for a set price to individual       *)
-(*  buyers in a decentralized and                  *)
-(* fair manner.                                    *)
+(* This contract tracks the official offset        *)
+(* progress within the Zilliqa voluntary offsetting*)
+(* scheme across any number of approved schemes    *)
 (*                                                 *)
 (* WARNING: If the owner loses their private key   *)
 (* they will be unable to interact with the smart  *)
@@ -153,6 +148,13 @@ end
 
 (*                    Begin Transitions                       *)
 
+transition ContributeGrams(offset: Uint256)
+  SenderIsAllowedContract;
+  current_tally <- grams_offset;
+  new_total = builtin add current_tally offset;
+  grams_offset := new_total
+end
+
 transition AddOffsetContract(address: ByStr20)
   IsOwner;
   added_approved_contracts = Cons {ByStr20} address empty_list;
@@ -160,6 +162,7 @@ transition AddOffsetContract(address: ByStr20)
   combine = @list_append ByStr20;
   new_list = combine added_approved_contracts old_list;
   approved_contracts := new_list
+  (*TODO: Trigger EnrollmentSuccessCallBack(from: ByStr20, contract_addr: ByStr20) callbakc*)
 end
 
 transition RemoveOffsetContract(address: ByStr20)
@@ -211,7 +214,6 @@ transition ConfirmOwnershipTransfer()
   end
 end
 
-
-(* Compatible contracts must return this callback*)
-transition  EnrollmentSuccessCallBack(from: ByStr20, contract_addr: ByStr20)
-end
+(* Compatible contracts must include these callbacks:*)
+(*transition  EnrollmentSuccessCallBack(contract_addr: ByStr20)*)
+(*transition  OffsetSuccessCallBack(grams: Uint256)*)
