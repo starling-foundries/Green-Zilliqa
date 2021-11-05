@@ -152,7 +152,11 @@ transition ContributeGrams(offset: Uint256)
   SenderIsAllowedContract;
   current_tally <- grams_offset;
   new_total = builtin add current_tally offset;
-  grams_offset := new_total
+  grams_offset := new_total;
+  (*transition  OffsetSuccessCallback(grams: Uint256)*)
+      msg  = {_tag : "OffsetSuccessCallback"; _recipient : _sender; _amount : Uint128 0; grams: offset};
+      msgs = one_msg msg;
+    send msgs
 end
 
 transition AddOffsetContract(address: ByStr20)
@@ -161,8 +165,11 @@ transition AddOffsetContract(address: ByStr20)
   old_list <- approved_contracts;
   combine = @list_append ByStr20;
   new_list = combine added_approved_contracts old_list;
-  approved_contracts := new_list
-  (*TODO: Trigger EnrollmentSuccessCallBack(from: ByStr20, contract_addr: ByStr20) callbakc*)
+  approved_contracts := new_list;
+  (*Trigger EnrollmentSuccessCallBack() callback*)
+      msg  = {_tag : "EnrollmentSuccessCallback"; _recipient : address; _amount : Uint128 0};
+      msgs = one_msg msg;
+    send msgs
 end
 
 transition RemoveOffsetContract(address: ByStr20)
@@ -215,5 +222,5 @@ transition ConfirmOwnershipTransfer()
 end
 
 (* Compatible contracts must include these callbacks:*)
-(*transition  EnrollmentSuccessCallBack(contract_addr: ByStr20)*)
-(*transition  OffsetSuccessCallBack(grams: Uint256)*)
+(*transition  EnrollmentSuccessCallback()*)
+(*transition  OffsetSuccessCallback(grams: Uint256)*)
